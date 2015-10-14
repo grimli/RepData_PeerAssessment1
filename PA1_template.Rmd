@@ -5,7 +5,7 @@ output:
     keep_md: true
 ---
 
-I will use the following libraries in the analysis 
+The following libraries will be used in the analysis 
 
 ```{r, echo=TRUE}
 library(plyr)
@@ -13,7 +13,11 @@ library(ggplot2)
 library(chron)
 ```
 
-The working directory has to be proprly setted up. I will suppose that the required project has been cloned in the home 
+* **plyr**: will be used to manipulate datas
+* **ggplot2**: will be used for some of the plot
+* **chron**: will be used to discriminate between weekdays and weekends
+
+I will suppose that the required project has been cloned in the home 
 directory of a linux machine; otherwise the proper working directory should be inserted below
 
 ```{r, echo=TRUE}
@@ -29,7 +33,7 @@ unzip("activity.zip")
 activity <- read.csv2("activity.csv", sep = ",", na.strings = "NA")
 ```
 
-I add a column with a properly formatted data too
+I add a column with a properly formatted date. It will be used in some of the plots. 
 ```{r, echo=TRUE}
 activity <- transform(activity, formatted_data = strptime(date, "%Y-%m-%d"))
 ```
@@ -44,6 +48,7 @@ activity <- transform(activity, contatore=1)
 missing_values <- subset(activity, is.na(steps))
 ddply(missing_values, .(date), summarize, tot_missing = sum(contatore))
 ```
+
 Similarly it can be verified that every day there is the proper number of samples 
 
 ```{r, echo=TRUE}
@@ -51,13 +56,13 @@ num_samples <- ddply(activity, .(date), summarize, num_samples = sum(contatore))
 num_samples[num_samples$num_samples != 288, ]
 ```
 
-I calculate then the mean and the median total number of steps ignoring the days with missing values
+I calculate then the mean and the median total number of steps for each day ignoring the days with missing values
 
 ```{r, echo=TRUE}
 not_missing_values <- subset(activity, !is.na(steps))
 total_steps <- ddply(not_missing_values, .(date), summarise, totSteps = sum(steps))
-mean =mean(total_steps$totSteps)
-median =median(total_steps$totSteps)
+mean = mean(total_steps$totSteps)
+median = median(total_steps$totSteps)
 cbind(mean,median)
 ```
 
@@ -72,7 +77,7 @@ The time series can be plotted
 with(mean_time_series, plot(x = interval, y=steps, type = "l") )
 ```
 
-and the interval with the max mean number of steps easaly calculated
+and the interval with the max mean number of steps is easaly calculated
 ```{r, echo=TRUE}
 subset(mean_time_series,steps == max(steps))
 ```
@@ -86,12 +91,16 @@ activity<- transform(activity, contatore=1)
 missing_values <- subset(activity, is.na(steps))
 ddply(missing_values, .(date), summarize, tot_missing = sum(contatore))
 ```
+
 Moreover the total number of missing values can be calculated in a similar way
+
 ```{r, echo=TRUE}
 ddply(missing_values, .(), summarize, tot_missing = sum(contatore))
 ```
 
-Having full days of missing values I will use the mean values for each interval calculated across the other days. These values have been previously calculated and recorded in the data frame **mean_time_series**. I'm going to save the new dataset in the variable **new_dataset**
+There are only full days of missing values. I will substitute the missing values with the mean values calculated over the orther days. 
+
+These values have been previously calculated and recorded in the data frame **mean_time_series**. I'll put the new dataset in the dataframe **new_dataset**.  
 
 ```{r, echo=TRUE}
 imputing_values <- cbind(mean_time_series[,"steps"], missing_values[,c("date", "interval", "formatted_data","contatore")])
@@ -99,7 +108,7 @@ colnames(imputing_values) <- c("steps", "date", "interval", "formatted_data", "c
 new_dataset <- rbind(not_missing_values,imputing_values)
 ```
 
-To plot the histogram of the total number of steps across the days I have to calculate these values on the new data too
+To plot the histogram of the total number of steps across the days I have to calculate these values on the new data set too
 
 ```{r, echo=TRUE}
 imputing_total_steps <- ddply(new_dataset, .(date), summarise, totSteps = sum(steps))
@@ -117,6 +126,7 @@ colnames(results) <- c("mean","median")
 rownames(results) <- c("new","orig")
 results
 ```
+
 In this table the **new** row contains the values just calculated and the **orig** row the values calculated on the original dataset.
 
 The **mean** values is unchanged, as expected, and the variation in the **median** value is negligible
@@ -128,7 +138,7 @@ First of all I have to update the dataset adding the requested information. This
 new_dataset <- transform( new_dataset, working_week = factor(is.weekend(formatted_data), levels=c(TRUE, FALSE), labels=c('weekend', 'weekday')) )
 ```
  
-The column working_week contains a proper label to summarize data in the requested way
+The column working_week contains now a proper label to summarize data in the requested way
 ```{r, echo=TRUE}
 working_week_total <- ddply(new_dataset, .(working_week,interval), summarise, totSteps = sum(steps))
 ```
@@ -137,3 +147,4 @@ This data can be then plotted
 ```{r, echo=TRUE}
 ggplot(data = working_week_total, aes(x=interval, y=totSteps))+geom_line()+facet_grid(working_week~.)+ylab("Number of Steps")+xlab("Interval")
 ```
+
